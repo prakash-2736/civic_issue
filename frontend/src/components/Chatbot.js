@@ -3,15 +3,25 @@ import { FaRobot, FaTimes } from "react-icons/fa";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Gemini API Key rotation
-const GEMINI_KEYS = (process.env.REACT_APP_GEMINI_API_KEY || "").split(",");
+const GEMINI_KEYS = (process.env.REACT_APP_GEMINI_API_KEY || "")
+  .split(",")
+  .map((key) => key.trim())
+  .filter((key) => key.length > 0);
 let keyIndex = 0;
 const getNextKey = () => {
+  if (GEMINI_KEYS.length === 0) {
+    console.error("No Gemini API keys found!");
+    return null;
+  }
   const key = GEMINI_KEYS[keyIndex];
   keyIndex = (keyIndex + 1) % GEMINI_KEYS.length;
   return key;
 };
 const createAIInstance = () => {
   const key = getNextKey();
+  if (!key) {
+    throw new Error("No valid Gemini API key available");
+  }
   console.log("Using Gemini API Key:", key.slice(0, 6) + "...");
   return new GoogleGenerativeAI(key);
 };
@@ -54,7 +64,7 @@ Rules:
 
     try {
       const ai = createAIInstance();
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const conversationText = newMessages
         .map((m) => (m.role === "user" ? "User: " : "Assistant: ") + m.content)
@@ -63,12 +73,24 @@ Rules:
       const prompt = `${WEBSITE_CONTEXT}\n\nConversation so far:\n${conversationText}\nAssistant:`;
 
       const result = await model.generateContent([{ text: prompt }]);
-      const reply = result.response.text?.() || "Sorry, I couldn't generate a response.";
+      const reply =
+        result.response.text?.() || "Sorry, I couldn't generate a response.";
 
       setMessages([...newMessages, { role: "assistant", content: reply }]);
     } catch (error) {
       console.error("Gemini API error:", error);
-      setMessages([...newMessages, { role: "assistant", content: "Something went wrong" }]);
+      let errorMessage = "Something went wrong. Please try again.";
+
+      if (error.message?.includes("API key")) {
+        errorMessage = "API key error. Please check configuration.";
+      } else if (error.message?.includes("quota")) {
+        errorMessage = "API quota exceeded. Please try again later.";
+      }
+
+      setMessages([
+        ...newMessages,
+        { role: "assistant", content: errorMessage },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -78,11 +100,13 @@ Rules:
     <div className="fixed bottom-5 right-5 z-50 font-sans">
       {isOpen ? (
         <div className="w-80 h-[480px] bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden">
-          
           {/* Header */}
           <div className="bg-orange-600 text-white px-4 py-3 flex justify-between items-center font-semibold">
             Citizen Bot
-            <FaTimes className="cursor-pointer" onClick={() => setIsOpen(false)} />
+            <FaTimes
+              className="cursor-pointer"
+              onClick={() => setIsOpen(false)}
+            />
           </div>
 
           {/* Messages */}
@@ -100,7 +124,9 @@ Rules:
               </div>
             ))}
             {loading && (
-              <div className="italic text-gray-500 text-sm">Bot is typing...</div>
+              <div className="italic text-gray-500 text-sm">
+                Bot is typing...
+              </div>
             )}
             <div ref={messagesEndRef}></div>
           </div>

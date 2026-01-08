@@ -17,15 +17,14 @@ const app = express();
 // Configure CORS for specific origins and methods
 const corsOptions = {
   origin: [
-    'http://localhost:3000',           // for local frontend testing
-    'https://sihfinal2025.vercel.app' // deployed frontend
+    "http://localhost:3002", // for local frontend testing
+    "https://sihfinal2025.vercel.app", // deployed frontend
   ],
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
 };
 app.use(cors(corsOptions));
-
 
 app.use(express.json());
 
@@ -42,6 +41,8 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(
-    `Server running in ${process.env.NODE_ENV || "development"} mode on port ${PORT}`
+    `Server running in ${
+      process.env.NODE_ENV || "development"
+    } mode on port ${PORT}`
   )
 );
